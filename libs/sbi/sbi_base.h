@@ -6,7 +6,7 @@
 
 
 // Get SBI specification version
-static inline struct sbiret sbi_get_sbi_spec_version(void){
+static inline struct sbiret sbi_get_spec_version(void){
     return sbi_ecall(SBI_EXT_BASE,
                      SBI_EXT_BASE_GET_SPEC_VERSION,
                      0,0,0,0,0,0);

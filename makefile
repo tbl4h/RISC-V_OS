@@ -6,9 +6,10 @@
 CROSS_COMPILE ?= riscv64-linux-gnu-
 SBI_INCLUDE ?= opensbi/include
 LIBS_INCLUDE ?= libs
+LIBFDT ?= opensbi/lib/utils/libfdt
 
 kernel:
-	$(CROSS_COMPILE)gcc -nostdlib -I$(LIBS_INCLUDE) -I$(SBI_INCLUDE) -T kernel/linker.ld kernel/entry.S kernel/kernel.c -o kernel.elf
+	$(CROSS_COMPILE)gcc -nostdlib -I$(LIBS_INCLUDE) -I$(SBI_INCLUDE) -I${LIBFDT} -T kernel/linker.ld kernel/entry.S kernel/kernel.c -o kernel.elf
 
 
 opensbi: kernel
