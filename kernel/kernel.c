@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <opensbi/lib/utils/libfdt/libfdt.h>
+#include <libfdt.h>
 #include <sbi/sbi.h>
 #include <sbi/sbi_healper.h>
 #include <sbi/sbi_base.h>
@@ -9,7 +9,7 @@
 #include <sbi/sbi_reference_extension.h>
 #include <sbi/sbi_system reset extension.h>
 #include <sbi/sbi_timer.h>
-#include "panic.c"
+#include <panic.h>
 
 void kmain(uint64_t hartid, void *dtb)
 {

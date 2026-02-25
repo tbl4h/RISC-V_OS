@@ -2,16 +2,8 @@
 #include <sbi/sbi_base.h>
 #include <sbi/sbi_system reset extension.h>
 #include <sbi/sbi_ipi.h>
+#include <panic.h>
 
-static inline void disable_interrupts(void)
-{
-    asm volatile("csrci sstatus, 2"); // clear SIE
-}
-
-static inline void debug_break(void)
-{
-    asm volatile("ebreak");
-}
 
 static void stop_other_harts(void)
 {
@@ -31,7 +23,7 @@ void panic(const char *msg)
 
     /* Zachowaj wskaźnik do komunikatu w rejestrze,
        aby debugger mógł go odczytać */
-    register const char *panic_msg asm("s0") = msg;
+    register const char *panic_msg asm("t0") = msg;
     (void)panic_msg;
 
     stop_other_harts();

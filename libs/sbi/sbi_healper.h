@@ -2,6 +2,7 @@
 #define SBI_HEALPER_H   
 #include "sbi.h"
 #include "sbi_base.h"
+#include <panic.h>
 
 static void require_extension(long ext, const char *name)
 {
