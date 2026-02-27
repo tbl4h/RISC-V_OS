@@ -1,16 +1,21 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "RISC-V",
+            //"compileCommands": "${workspaceFolder}/compile_commands.json",
             "includePath": [
-                "${workspaceFolder}/**",
-                "${workspaceFolder}/opensbi/include"
+                "${workspaceFolder}/libs",
+                "${workspaceFolder}/libs/dtb",
+                "${workspaceFolder}/opensbi/lib/utils/libfdt",
+                "${workspaceFolder}/libs/sbi",
+                "${workspaceFolder}/opensbi/include",
+                "${workspaceFolder}/kernel"
             ],
             "defines": [],
-            "compilerPath": "/usr/bin/clang-20",
+            "compilerPath": "/usr/bin/riscv64-linux-gnu-gcc",
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "linux-clang-x64"
+            "intelliSenseMode": "linux-gcc-x64"
         }
     ],
     "version": 4

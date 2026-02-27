@@ -5,6 +5,8 @@
 # Default cross-compiler prefix (can be overridden on the make command line)
 CROSS_COMPILE ?= riscv64-linux-gnu-
 SBI_INCLUDE ?= opensbi/include
+MY_SBI_INCLUDE ?= libs/sbi
+MY_DTB_INCLUDE ?= libs/dtb
 LIBS_INCLUDE ?= libs
 LIBFDT ?= opensbi/lib/utils/libfdt
 DTB_INCLUDE ?= libs
@@ -29,8 +31,10 @@ OPENSBI_UTILS_SRCS = \
 KERNEL_INCLUDES = \
 	-I$(LIBS_INCLUDE) \
 	-I$(SBI_INCLUDE) \
+	-I$(MY_SBI_INCLUDE) \
 	-I$(LIBFDT) \
 	-I$(DTB_INCLUDE) \
+	-I$(MY_DTB_INCLUDE) \
 	-I$(KERNEL)
 
 kernel:

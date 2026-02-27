@@ -1,10 +1,9 @@
 #ifndef SBI_TIMER_H
 #define SBI_TIMER_H
 
-#include "sbi.h"
+#include <sbi.h>
 
 // Set timer
-
 static inline struct sbiret sbi_set_timer(uint64_t stime_value)
 {
     return sbi_ecall(

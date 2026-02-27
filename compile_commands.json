@@ -1,0 +1,17 @@
+[
+  {
+    "directory": "/home/mic/Projects/RISC-V_OS",
+    "file": "kernel/kernel.c",
+    "command": "riscv64-linux-gnu-gcc -nostdlib -Ilibs -Iopensbi/include -Iopensbi/lib/utils/libfdt -Ilibs -Ikernel -c kernel/kernel.c -o /tmp/kernel.kernel.o"
+  },
+  {
+    "directory": "/home/mic/Projects/RISC-V_OS",
+    "file": "kernel/panic.c",
+    "command": "riscv64-linux-gnu-gcc -nostdlib -Ilibs -Iopensbi/include -Iopensbi/lib/utils/libfdt -Ilibs -Ikernel -c kernel/panic.c -o /tmp/kernel.panic.o"
+  },
+  {
+    "directory": "/home/mic/Projects/RISC-V_OS",
+    "file": "libs/dtb/dtb.c",
+    "command": "riscv64-linux-gnu-gcc -nostdlib -Ilibs -Iopensbi/include -Iopensbi/lib/utils/libfdt -Ilibs -Ikernel -c libs/dtb/dtb.c -o /tmp/libs.dtb.o"
+  }
+]
