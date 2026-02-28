@@ -931,6 +931,41 @@ int dtb_get_timebase(uint32_t *timebase)
 }
 
 /*
+Ta funkcja to mały helper do odczytu pojedynczej 32-bitowej właściwości z 
+drzewa urządzeń (DTB) dla danego węzła.
+Kiedy jest używana:
+
+Gdy masz węzeł DTB i chcesz szybko pobrać jedną prostą wartość typu u32 z jakiejś właściwości, bez pisania za każdym razem tej samej logiki fdt_getprop + długość + konwersja endianness.
+W Twoim kernelu używasz jej przy inicjalizacji UART, żeby odczytać np.:
+current-speed (baud),
+reg-shift,
+reg-io-width,
+z węzła UART wykrytego w DTB (zob. kernel.c).
+
+*/
+int dtb_get_u32(int node, const char *prop_name, uint32_t *out)
+{
+    int err;
+    int len;
+    const fdt32_t *prop;
+
+    err = dtb_require_init();
+    if (err)
+        return err;
+    if (!prop_name || !out)
+        return -FDT_ERR_BADVALUE;
+
+    prop = fdt_getprop(g_fdt, node, prop_name, &len);
+    if (!prop)
+        return len;
+    if (len < (int)sizeof(fdt32_t))
+        return -FDT_ERR_BADVALUE;
+
+    *out = fdt32_to_cpu(*prop);
+    return 0;
+}
+
+/*
 Odczytuje właściwość clock-frequency z węzła node i zapisuje ją jako 64-bitową wartość do *freq.
 Obsługuje zarówno 32-bitowe (1 komórka), jak i 64-bitowe (2 komórki) reprezentacje częstotliwości.
 Zwraca 0 przy sukcesie lub kod błędu libfdt, jeśli właściwość nie istnieje albo jest zbyt krótka.
@@ -987,13 +1022,14 @@ int dtb_get_timer_node(int *node)
     const char *compat[] = {
         "riscv,timer",
         "riscv,clint0",
+        "riscv,aclint-mtimer",
     };
     int err = dtb_require_init();
     if (err)
         return err;
     if (!node)
         return -FDT_ERR_BADVALUE;
-    return find_any_compatible(compat, 2, node);
+    return find_any_compatible(compat, 3, node);
 }
 
 /*

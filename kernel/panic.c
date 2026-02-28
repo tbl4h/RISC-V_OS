@@ -3,6 +3,7 @@
 #include <sbi/sbi_system reset extension.h>
 #include <sbi/sbi_ipi.h>
 #include <panic.h>
+#include <uart/uart_console.h>
 
 
 static void stop_other_harts(void)
@@ -20,6 +21,15 @@ __attribute__((noreturn))
 void panic(const char *msg)
 {
     disable_interrupts();
+
+    if (uart_console_is_ready()) {
+        uart_console_puts("\n[panic] ");
+        if (msg)
+            uart_console_puts(msg);
+        else
+            uart_console_puts("(null)");
+        uart_console_puts("\n");
+    }
 
     /* Zachowaj wskaźnik do komunikatu w rejestrze,
        aby debugger mógł go odczytać */

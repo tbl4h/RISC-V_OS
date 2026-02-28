@@ -10,6 +10,7 @@
                 "${workspaceFolder}/libs/sbi",
                 "${workspaceFolder}/opensbi/include",
                 "${workspaceFolder}/kernel"
+                "${workspaceFolder}/drivers/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/riscv64-linux-gnu-gcc",

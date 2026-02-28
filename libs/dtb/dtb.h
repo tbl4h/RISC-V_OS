@@ -120,6 +120,7 @@ int dtb_detect_clint(int *node);
 int dtb_detect_imsic(int *node);
 
 int dtb_get_timebase(uint32_t *timebase);
+int dtb_get_u32(int node, const char *prop, uint32_t *out);
 int dtb_get_clock_frequency(int node, uint64_t *freq);
 int dtb_get_device_clocks(int node, uint32_t *clks, int cap, int *count);
 int dtb_get_timer_node(int *node);
