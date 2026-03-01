@@ -52,7 +52,7 @@ typedef struct {
     uint64_t start;           /* Adres początkowy */
     uint64_t end;             /* Adres końcowy */
     uint8_t pte_flags;        /* Flagi PTE (R/W/X) */
-    uint8_t protect_flags;    /* Flagi ochronne (MM_FLAG_*) */
+    uint16_t protect_flags;   /* Flagi ochronne (MM_FLAG_*) */
     const char *source;       /* Źródło regionu */
 } mm_region_t;
 
@@ -71,10 +71,10 @@ typedef struct {
     
     /* Statystyki */
     uint64_t first_free_frame;
-    uint32_t ram_pages;
-    uint32_t reserved_pages;
-    uint32_t reserved_pages_in_ram;
-    uint32_t free_pages;
+    uint64_t ram_pages;
+    uint64_t reserved_pages;
+    uint64_t reserved_pages_in_ram;
+    uint64_t free_pages;
     
     /* Wyniki walidacji */
     int totals_ok;

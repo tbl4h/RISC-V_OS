@@ -25,6 +25,7 @@ typedef struct {
     int (*try_getc)(char *out);
     void (*put_hex_u64)(uint64_t value);
     void (*put_dec_u32)(uint32_t value);
+    void (*put_dec_u64)(uint64_t value);
     void (*put_dec_i32)(int value);
 } uart_console_backend_t;
 
@@ -49,6 +50,7 @@ int uart_console_write(const char *buf, uint64_t len);
 int uart_console_try_getc(char *out);
 void uart_console_put_hex_u64(uint64_t value);
 void uart_console_put_dec_u32(uint32_t value);
+void uart_console_put_dec_u64(uint64_t value);
 void uart_console_put_dec_i32(int value);
 const char *uart_console_strerror(int err);
 

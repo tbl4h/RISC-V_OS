@@ -32,6 +32,7 @@ static const uart_console_backend_t g_ns16550a_backend = {
     .try_getc = ns16550a_try_getc,
     .put_hex_u64 = ns16550a_put_hex_u64,
     .put_dec_u32 = ns16550a_put_dec_u32,
+    .put_dec_u64 = ns16550a_put_dec_u64,
     .put_dec_i32 = ns16550a_put_dec_i32,
 };
 
@@ -262,6 +263,13 @@ void uart_console_put_dec_u32(uint32_t value)
     if (!uart_console_is_ready())
         return;
     g_uart_console_backend->put_dec_u32(value);
+}
+
+void uart_console_put_dec_u64(uint64_t value)
+{
+    if (!uart_console_is_ready())
+        return;
+    g_uart_console_backend->put_dec_u64(value);
 }
 
 void uart_console_put_dec_i32(int value)

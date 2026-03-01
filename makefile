@@ -90,6 +90,6 @@ run: opensbi
 
 clean:
 	rm -f $(KERNEL_ELF) $(KERNEL_BIN)
-	@if [ -f "$(OPENSBI_DIR)/Makefile" ]; then \
-		$(MAKE) -C "$(OPENSBI_DIR)" clean; \
-	fi
+#	@if [ -f "$(OPENSBI_DIR)/Makefile" ]; then \
+#		$(MAKE) -C "$(OPENSBI_DIR)" clean; \
+#	fi

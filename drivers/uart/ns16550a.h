@@ -31,6 +31,7 @@ void ns16550a_write(const char *buf, uint64_t len);
 int ns16550a_try_getc(char *out);
 void ns16550a_put_hex_u64(uint64_t v);
 void ns16550a_put_dec_u32(uint32_t v);
+void ns16550a_put_dec_u64(uint64_t v);
 void ns16550a_put_dec_i32(int v);
 
 #endif

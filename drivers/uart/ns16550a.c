@@ -211,6 +211,25 @@ void ns16550a_put_dec_u32(uint32_t value)
         ns16550a_putc(buf[i]);
 }
 
+void ns16550a_put_dec_u64(uint64_t value)
+{
+    char buf[21];
+    int i = 0;
+
+    if (value == 0) {
+        ns16550a_putc('0');
+        return;
+    }
+
+    while (value && i < (int)sizeof(buf)) {
+        buf[i++] = (char)('0' + (value % 10));
+        value /= 10;
+    }
+
+    while (i--)
+        ns16550a_putc(buf[i]);
+}
+
 void ns16550a_put_dec_i32(int value)
 {
     if (value < 0) {

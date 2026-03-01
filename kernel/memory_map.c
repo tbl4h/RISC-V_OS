@@ -4,9 +4,23 @@
 #include <uart/uart_console.h>
 #include <memory_map.h>
 
+/*
+ * Stałe związane z zarządzaniem pamięcią
+ */
+
+/* Rozmiar strony pamięci w trybie Sv39 (4KB) */
 #define MM_PAGE_SIZE 0x1000ULL
+
+/* Maksymalna liczba regionów RAM (z DTB) */
 #define MM_MAX_RAM_REGIONS DTB_MAX_MEM_REGIONS
+
+/* Pojemność obszaru roboczego dla wszystkich regionów (reserved + free)
+ * Obliczona jako: liczba regionów RAM * (maksymalne rejestry DTB * 2 + 8) */
 #define MM_REGION_WORKSPACE_CAP (DTB_MAX_MEM_REGIONS * ((DTB_MAX_REGS * 2) + 8))
+
+/* Maksymalna liczba unikalnych zakresów adresowych do deduplikacji
+ * Używane w mm_sum_pages_clipped_to_ram() do alokacji tablic pomocniczych */
+#define MM_MAX_RANGES 64
 
 enum {
     MM_ERR_BADVALUE = -3000,
@@ -35,8 +49,19 @@ static dtb_addr_t g_dtb_reserved_regions[DTB_MAX_MEM_REGIONS];
 /* Struktura przechowująca stan mapy pamięci */
 static mm_state_t g_mm_state = {
     .ram = g_mm_ram,
+    .ram_count = 0,
     .reserved = g_mm_reserved,
+    .reserved_count = 0,
     .free = g_mm_free,
+    .free_count = 0,
+    .first_free_frame = 0,
+    .ram_pages = 0,
+    .reserved_pages = 0,
+    .reserved_pages_in_ram = 0,
+    .free_pages = 0,
+    .totals_ok = 0,
+    .first_free_ok = 0,
+    .overlap_free_reserved = 0,
 };
 
 /**
@@ -89,10 +114,10 @@ static uint64_t mm_max_u64(uint64_t a, uint64_t b)
  * @param end Adres końcowy zakresu
  * @return Liczba stron w zakresie
  */
-static uint32_t mm_pages_u32(uint64_t start, uint64_t end)
+static uint64_t mm_pages_u64(uint64_t start, uint64_t end)
 {
     uint64_t bytes = (end > start) ? (end - start) : 0;
-    return (uint32_t)(bytes / MM_PAGE_SIZE);
+    return bytes / MM_PAGE_SIZE;
 }
 
 /**
@@ -133,7 +158,7 @@ static int mm_region_add(mm_region_t *arr, int cap, int *count,
 }
 
 /**
- * Sortuje regiony pamięci według adresu początkowego (algorytm插入-sort).
+ * Sortuje regiony pamięci według adresu początkowego (algorytm insertion-sort).
  * @param arr Tablica regionów do posortowania
  * @param count Liczba elementów w tablicy
  */
@@ -172,7 +197,10 @@ static int mm_merge_regions(mm_region_t *arr, int count)
     out = 0;
 
     for (i = 1; i < count; i++) {
-        if (arr[i].start <= arr[out].end) {
+        /* Nie łącz regionów z różnymi flagami PTE lub ochronnymi */
+        if (arr[i].start <= arr[out].end &&
+            arr[i].pte_flags == arr[out].pte_flags &&
+            arr[i].protect_flags == arr[out].protect_flags) {
             if (arr[i].end > arr[out].end)
                 arr[out].end = arr[i].end;
             if (arr[i].source != arr[out].source)
@@ -194,13 +222,13 @@ static int mm_merge_regions(mm_region_t *arr, int count)
  * @param count Liczba elementów w tablicy
  * @return Suma stron we wszystkich regionach
  */
-static uint32_t mm_sum_pages(const mm_region_t *arr, int count)
+static uint64_t mm_sum_pages(const mm_region_t *arr, int count)
 {
     int i;
-    uint32_t sum = 0;
+    uint64_t sum = 0;
 
     for (i = 0; i < count; i++)
-        sum += mm_pages_u32(arr[i].start, arr[i].end);
+        sum += mm_pages_u64(arr[i].start, arr[i].end);
 
     return sum;
 }
@@ -208,27 +236,66 @@ static uint32_t mm_sum_pages(const mm_region_t *arr, int count)
 /**
  * Sumuje strony z regionów, które mieszczą się w regionach RAM.
  * Oblicza ilość pamięci zarezerwowanej wewnątrz RAM.
+ * Uwzględnia tylko unikalne strony (nie sumuje wielokrotnie tego samego obszaru).
  * @param regions Tablica regionów do zsumowania
  * @param region_count Liczba regionów
  * @param ram Tablica regionów RAM
  * @param ram_count Liczba regionów RAM
  * @return Suma stron przyciętych do RAM
  */
-static uint32_t mm_sum_pages_clipped_to_ram(const mm_region_t *regions, int region_count,
+static uint64_t mm_sum_pages_clipped_to_ram(const mm_region_t *regions, int region_count,
                                             const mm_region_t *ram, int ram_count)
 {
-    int i;
-    int j;
-    uint32_t sum = 0;
+    int i, j;
+    uint64_t starts[MM_MAX_RANGES];
+    uint64_t ends[MM_MAX_RANGES];
+    int range_count = 0;
+    uint64_t sum = 0;
 
-    for (i = 0; i < region_count; i++) {
+    /* Najpierw zbieramy wszystkie unikalne zakresy */
+    for (i = 0; i < region_count && range_count < MM_MAX_RANGES; i++) {
         for (j = 0; j < ram_count; j++) {
             uint64_t start = mm_max_u64(regions[i].start, ram[j].start);
             uint64_t end = mm_min_u64(regions[i].end, ram[j].end);
-
-            if (end > start)
-                sum += mm_pages_u32(start, end);
+            
+            if (end > start) {
+                starts[range_count] = start;
+                ends[range_count] = end;
+                range_count++;
+            }
         }
+    }
+
+    /* Sortujemy zakresy */
+    for (i = 0; i < range_count - 1; i++) {
+        for (j = i + 1; j < range_count; j++) {
+            if (starts[i] > starts[j]) {
+                uint64_t tmp = starts[i];
+                starts[i] = starts[j];
+                starts[j] = tmp;
+                tmp = ends[i];
+                ends[i] = ends[j];
+                ends[j] = tmp;
+            }
+        }
+    }
+
+    /* Sumujemy unikalne zakresy */
+    if (range_count > 0) {
+        uint64_t current_start = starts[0];
+        uint64_t current_end = ends[0];
+        
+        for (i = 1; i < range_count; i++) {
+            if (starts[i] <= current_end) {
+                if (ends[i] > current_end)
+                    current_end = ends[i];
+            } else {
+                sum += mm_pages_u64(current_start, current_end);
+                current_start = starts[i];
+                current_end = ends[i];
+            }
+        }
+        sum += mm_pages_u64(current_start, current_end);
     }
 
     return sum;
@@ -308,9 +375,6 @@ static int mm_collect_dtb_mmio_regions(mm_region_t *reserved, int cap, int *rese
     const void *fdt = dtb_get();
     int depth = -1;
     int node = -1;
-
-    (void)ram;
-    (void)ram_count;
 
     if (!fdt)
         return -FDT_ERR_BADSTATE;
@@ -456,7 +520,7 @@ static void mm_dump_range_line(const char *tag, int idx, const mm_region_t *r)
     uart_console_puts("..");
     uart_console_put_hex_u64(r->end);
     uart_console_puts(" pages=");
-    uart_console_put_dec_u32(mm_pages_u32(r->start, r->end));
+    uart_console_put_dec_u64(mm_pages_u64(r->start, r->end));
     uart_console_puts(" pte=");
     mm_dump_pte_flags(r->pte_flags);
     uart_console_puts("(");
@@ -497,10 +561,10 @@ int mm_stage2_build(const hw_state_t *hw)
     int i;
     int err;
     uint64_t first_free_frame;
-    uint32_t ram_pages;
-    uint32_t reserved_pages;
-    uint32_t reserved_pages_in_ram;
-    uint32_t free_pages;
+    uint64_t ram_pages;
+    uint64_t reserved_pages;
+    uint64_t reserved_pages_in_ram;
+    uint64_t free_pages;
     int totals_ok;
     int first_free_ok;
     int overlap_free_reserved;
@@ -533,7 +597,7 @@ int mm_stage2_build(const hw_state_t *hw)
         return err;
 
     err = mm_region_add(reserved, MM_REGION_WORKSPACE_CAP, &reserved_count,
-                        hw->mem_base, first_free_frame,
+                        hw->mem_base, (uint64_t)(uintptr_t)_kernel_start,
                         MM_R, MM_FLAG_BOOT | MM_FLAG_RESERVED, "boot-reserved");
     if (err)
         return err;
@@ -611,7 +675,7 @@ int mm_stage2_build(const hw_state_t *hw)
     reserved_pages_in_ram = mm_sum_pages_clipped_to_ram(reserved, reserved_count, ram, ram_count);
     free_pages = mm_sum_pages(free_regions, free_count);
 
-    totals_ok = (ram_pages == (uint32_t)(reserved_pages_in_ram + free_pages));
+    totals_ok = (ram_pages == (reserved_pages_in_ram + free_pages));
     first_free_ok = mm_addr_in_regions(first_free_frame, free_regions, free_count);
     overlap_free_reserved = mm_free_overlaps_reserved(free_regions, free_count,
                                                       reserved, reserved_count);
@@ -675,13 +739,13 @@ int mm_stage2_dump(void)
         mm_dump_range_line("free", i, &free_regions[i]);
 
     uart_console_puts("[mm] totals: ram_pages=");
-    uart_console_put_dec_u32(g_mm_state.ram_pages);
+    uart_console_put_dec_u64(g_mm_state.ram_pages);
     uart_console_puts(" reserved_pages=");
-    uart_console_put_dec_u32(g_mm_state.reserved_pages);
+    uart_console_put_dec_u64(g_mm_state.reserved_pages);
     uart_console_puts(" reserved_pages_in_ram=");
-    uart_console_put_dec_u32(g_mm_state.reserved_pages_in_ram);
+    uart_console_put_dec_u64(g_mm_state.reserved_pages_in_ram);
     uart_console_puts(" free_pages=");
-    uart_console_put_dec_u32(g_mm_state.free_pages);
+    uart_console_put_dec_u64(g_mm_state.free_pages);
     uart_console_puts("\n");
 
     uart_console_puts("[mm] check: R == Z + F -> ");
