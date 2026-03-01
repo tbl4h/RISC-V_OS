@@ -1,5 +1,5 @@
-#include <dtb.h>
 #include <libfdt.h>
+#include <dtb.h>
 #include <string.h>
 
 static const void *g_fdt;

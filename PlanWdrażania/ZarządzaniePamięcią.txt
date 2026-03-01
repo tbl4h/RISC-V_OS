@@ -1,0 +1,27 @@
+Świetny moment — i bardzo dobre podejście, żeby robić to etapami 👍
+Ja proponuję taką kolejność (bez implementacji):
+
+Proponowane etapy
+
+1. Ustalenie modelu pamięci: Sv39, rozmiar strony 4 KiB, które obszary są zarezerwowane (kernel, stosy, MMIO, boot data).
+2. Mapa fizycznej pamięci: skąd bierzemy informacje o RAM (np. z bootloadera/device tree) i jak oznaczamy regiony wolne/zajęte.
+3. Alokator ramek fizycznych: najprostszy na start (bitmapa albo freelist) dla pełnych stron.
+4. API tablic stron: funkcje typu map/unmap/translate, plus flagi R/W/X/U.
+5. Inicjalne mapowanie kernela: mapowanie sekcji kernela i przełączenie na paging (satp, sfence.vma).
+6. Prosty allocator jądra: najpierw bump allocator, później ewentualnie bardziej zaawansowany.
+7. Obsługa błędów stron i testy: page fault handler + proste scenariusze walidacyjne.
+Od czego zacząć najpierw
+
+Najpierw etap 1 + 2, potem od razu etap 3.
+Bez stabilnego alokatora ramek dalsze kroki (tablice stron, paging) będą kruche i trudne do debugowania.
+Jeśli chcesz, w kolejnym kroku rozpiszę Ci bardzo konkretny plan etapu 1 (co sprawdzić, jakie decyzje podjąć, jak zweryfikować).
+
+Konkretny plan etapu 1 (ustalenie modelu pamięci)
+
+Krok 1: Założenia platformy — potwierdź: RV64 + Sv39, tryb startu, emulator/sprzęt (qemu virt?), granice RAM/MMIO.
+Krok 2: Inwentaryzacja sekcji kernela — wypisz: .text, .rodata, .data, .bss, stack, (przyszły) heap.
+Krok 3: Docelowy układ VA/PA — zdecyduj: identity mapping na start czy „higher-half kernel”; zapisz konkretne zakresy adresów.
+Krok 4: Polityka uprawnień stron — np. .text=RX, .rodata=R, .data/.bss=RW, stack RW + później guard page.
+Krok 5: Obszary specjalne — oznacz regiony zarezerwowane: kernel image, firmware/boot, MMIO, page tables.
+Krok 6: Minimalny kontrakt API — zdefiniuj jakie operacje będą potrzebne w etapie 2/3 (map, unmap, alloc_frame), bez kodu.
+Krok 7: Kryteria gotowości — masz jedną „mapę pamięci” (tabela), listę flag PTE dla regionów i listę niezmienników (co nigdy nie może być mapowane/zapisywane).

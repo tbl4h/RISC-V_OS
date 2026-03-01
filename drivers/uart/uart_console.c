@@ -1,6 +1,5 @@
-#include <stdint.h>
-#include <dtb/dtb.h>
 #include <libfdt.h>
+#include <dtb/dtb.h>
 #include <uart/ns16550a.h>
 #include <uart/uart_console.h>
 
