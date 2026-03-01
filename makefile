@@ -23,6 +23,7 @@ KERNEL_LDFLAGS ?= -nostdlib -static -no-pie -Wl,--build-id=none
 KERNEL_SRCS = \
 	kernel/entry.S \
 	kernel/kernel.c \
+	kernel/memory_map.c \
 	kernel/platform_init.c \
 	kernel/panic.c \
 	drivers/uart/ns16550a.c \

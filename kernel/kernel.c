@@ -6,6 +6,7 @@
 #include <panic.h>
 #include <uart/uart_console.h>
 #include <platform_init.h>
+#include <memory_map.h>
 
 extern char _bss_start[];
 extern char _bss_end[];
@@ -53,6 +54,10 @@ void kmain(uint64_t hartid, void *dtb)
     validate_and_dump_dtb_state(&g_hw);
     init_sbi(&g_hw);
     uart_console_puts("[kernel] sbi ready\n");
+    if (mm_stage2_build(&g_hw))
+        panic("memory map stage2 build failed");
+    if (mm_stage2_dump())
+        panic("memory map stage2 dump failed");
 
     {
         
